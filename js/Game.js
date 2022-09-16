@@ -7,7 +7,9 @@ class Game {
 
     this.leader1 = createElement("h2");
     this.leader2 = createElement("h2");
-    this.playerMoving = false
+    this.playerMoving = false;
+    this.indoParaEsquerda = false;
+    this.esplodiu = false;
   }
 
   getState() {
@@ -32,10 +34,12 @@ class Game {
     car1 = createSprite(width / 2 - 50, height - 100);
     car1.addImage("car1", car1_img);
     car1.scale = 0.07;
+    car1.addImage("cabum",cabum);
 
     car2 = createSprite(width / 2 + 100, height - 100);
     car2.addImage("car2", car2_img);
     car2.scale = 0.07;
+    car2.addImage("cabum",cabum);
 
     cars = [car1, car2];
 
@@ -102,7 +106,7 @@ class Game {
     form.titleImg.class("gameTitleAfterEffect");
 
     //C39
-    this.resetTitle.html("Reiniciar Jogo");
+    this.resetTitle.html("Reiniciar");
     this.resetTitle.class("resetText");
     this.resetTitle.position(width / 2 + 200, 40);
 
@@ -134,7 +138,7 @@ class Game {
       this.showLife();
       this.showLeaderboard();
 
-      //índice da matriz
+        //índice da matriz
       var index = 0;
       for (var plr in allPlayers) {
         //adicione 1 ao índice para cada loop
@@ -143,6 +147,11 @@ class Game {
         //use os dados do banco de dados para exibir os carros nas direções x e y
         var x = allPlayers[plr].positionX;
         var y = height - allPlayers[plr].positionY;
+        var vidaA = allPlayers[plr].life;
+        if(vidaA<=0){
+          cars[index-1].changeImage("cabum");
+          cars[index-1].scale = 0.3;
+        }
 
         cars[index - 1].position.x = x;
         cars[index - 1].position.y = y;
@@ -154,14 +163,20 @@ class Game {
 
           this.handleFuel(index);
           this.handlePowerCoins(index);
+          this.colisao(index);
+          this.colisaoC(index);
+          if(player.life<=0){
+            this.esplodiu = true;
+            this.playerMoving = false;
+          }
 
           //alterar a posição da câmera na direção y
           camera.position.y = cars[index - 1].position.y;
         }
       }
 
-      if(this.playerMoving){
-        player.positionY+=5;
+      if (this.playerMoving) {
+        player.positionY += 5;
         player.update();
       }
 
@@ -261,20 +276,25 @@ class Game {
   }
 
   handlePlayerControls() {
+    if(!this.esplodiu){
     if (keyIsDown(UP_ARROW)) {
+      this.indoParaEsquerda = false;
       this.playerMoving = true;
       player.positionY += 10;
       player.update();
     }
 
     if (keyIsDown(LEFT_ARROW) && player.positionX > width / 3 - 50) {
+      this.indoParaEsquerda = true;
       player.positionX -= 5;
       player.update();
     }
 
     if (keyIsDown(RIGHT_ARROW) && player.positionX < width / 2 + 300) {
+      this.indoParaEsquerda = false;
       player.positionX += 5;
       player.update();
+    }
     }
   }
 
@@ -287,16 +307,15 @@ class Game {
       collected.remove();
     });
 
-    // reduzindo o combustível do carro
-    if(player.fuel>0&&this.playerMoving){
-      player.fuel-=0.3;
+    //reduzindo o combustível do carro
+    if (player.fuel > 0 && this.playerMoving) {
+      player.fuel -= 0.8;
     }
-    
-    if(player.fuel<=0){
+
+    if (player.fuel <= 0) {
       gameState = 2;
       this.gameOver();
     }
-    
   }
 
   handlePowerCoins(index) {
@@ -309,10 +328,61 @@ class Game {
     });
   }
 
+  colisao(index){
+    if(cars[index-1].collide(obstacles)){
+
+      if(this.indoParaEsquerda){
+        player.positionX += 100;
+      } else {
+        player.positionX -= 100;
+      }
+
+      if(player.life > 0){
+        player.life -= 185/4;
+      }
+
+      player.update();
+
+    }
+  }
+  colisaoC(index){
+    if(index===1){
+    if(cars[index-1].collide(cars[1])){
+
+      if(this.indoParaEsquerda){
+        player.positionX += 100;
+      } else {
+        player.positionX -= 100;
+      }
+
+      if(player.life > 0){
+        player.life -= 185/4;
+      }
+
+      player.update();
+    }
+    }
+    if(index===2){
+      if(cars[index-1].collide(cars[0])){
+  
+        if(this.indoParaEsquerda){
+          player.positionX += 100;
+        } else {
+          player.positionX -= 100;
+        }
+  
+        if(player.life > 0){
+          player.life -= 185/4;
+        }
+  
+        player.update();
+      }
+      }
+  }
+
   showRank() {
     swal({
-      //title: `Incrível!${"\n"}Rank${"\n"}${player.rank}`,
-      title: `Incrível!${"\n"}${player.rank}º lugar`,
+      title: `Incrível!${"\n"}Rank${"\n"}${player.rank}`,
       text: "Você alcançou a linha de chegada com sucesso!",
       imageUrl:
         "https://raw.githubusercontent.com/vishalgaddam873/p5-multiplayer-car-race-game/master/assets/cup.png",
